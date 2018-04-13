@@ -93,6 +93,7 @@ use std::sync::Mutex;
 use std::thread;
 use std::ascii::AsciiExt;
 use std::fmt;
+use std::time::Duration;
 
 pub mod cgi;
 pub mod content_encoding;
@@ -359,6 +360,16 @@ impl<F> Server<F> where F: Send + Sync + 'static + Fn(&Request) -> Response {
         while let Ok(Some(request)) = self.server.try_recv() {
             self.process(request);
         }
+    }
+
+    //processes all the client requests waiting to be processed
+    // but blocks up to timeout Duration if there is nothing waiting, and then returns
+    // so you have to call this repeatedly like poll() above.
+    #[inline]
+    pub fn run_timeout(self, timeout: Duration) {
+       while let Ok(Some(request)) = self.server.recv_timeout(timeout) {
+           self.process(request);
+       }
     }
 
     // Internal function, called when we got a request from tiny-http that needs to be processed.
